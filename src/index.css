@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@keyframes img-ping {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-img-ping {
+  animation: img-ping 2s infinite;
+}
