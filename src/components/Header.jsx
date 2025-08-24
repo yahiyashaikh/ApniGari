@@ -1,6 +1,15 @@
 import { Link } from "react-router-dom";
+import { FaUserCircle } from "react-icons/fa"; // You might need to install 'react-icons'
 
-export default function Header({ viewMode, setViewMode, setSignInOpen, setRegisterOpen, setUploadOpen }) {
+export default function Header({
+  viewMode,
+  setViewMode,
+  isLoggedIn, // New prop
+  userRole, // New prop
+  setSignInOpen,
+  setRegisterOpen,
+  handleLogout, // New prop
+}) {
   return (
     <nav className="flex justify-between items-center px-8 py-4 shadow bg-white">
       <h1 className="text-2xl font-bold text-red-600">APNIGARI</h1>
@@ -25,19 +34,41 @@ export default function Header({ viewMode, setViewMode, setSignInOpen, setRegist
           </select>
         </li>
       </ul>
-      <div className="flex gap-4">
-        <button
-          onClick={() => setSignInOpen(true)}
-          className="px-4 py-2 text-gray-700 font-medium hover:text-red-600"
-        >
-          Sign In
-        </button>
-        <button
-          onClick={() => setRegisterOpen(true)}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-        >
-          Register Now
-        </button>
+
+      <div className="flex items-center gap-4">
+        {/* Conditional rendering based on login status */}
+        {isLoggedIn ? (
+          <>
+            <Link
+              to={userRole === "seller" ? "/seller-dashboard" : "/buyer-dashboard"}
+              className="text-gray-700 font-medium hover:text-red-600 flex items-center gap-2"
+            >
+              <FaUserCircle className="h-6 w-6" /> {/* Dashboard Icon */}
+              Dashboard
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
+            >
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setSignInOpen(true)}
+              className="px-4 py-2 text-gray-700 font-medium hover:text-red-600"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => setRegisterOpen(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Register Now
+            </button>
+          </>
+        )}
       </div>
     </nav>
   );

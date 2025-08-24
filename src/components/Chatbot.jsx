@@ -1,74 +1,57 @@
-import React, { useState } from "react";
+// Chatbot.jsx
+import React, { useState, useEffect } from "react";
 
 const App = () => {
-  const [isOpen, setIsOpen] = useState(false); // window closed by default
+  const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState("chat"); // chat | car | bike
-  const [messages, setMessages] = useState([]); // chat history
-  const [input, setInput] = useState(""); // input text
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [carData, setCarData] = useState([]);
+  const [bikeData, setBikeData] = useState([]);
 
-  // Example data
-  const carData = [
-    {
-      name: "Tesla Model S",
-      img: "https://www.tesla.com/sites/default/files/modelsx-new/social/model-s-hero-social.jpg",
-      price: "$85,000",
-    },
-    {
-      name: "BMW i8",
-      img: "car.jpg",
-      price: "$140,000",
-    },
-    {
-      name: "BMW i8",
-      img: "car.jpg",
-      price: "$140,000",
-    },
-    {
-      name: "BMW i8",
-      img: "car.jpg",
-      price: "$140,000",
-    },
-  ];
+  // Fetch cars/bikes when switching tabs
+  useEffect(() => {
+    if (viewMode === "car") {
+      fetch("http://localhost:5000/cars")
+        .then((res) => res.json())
+        .then((data) => setCarData(data))
+        .catch(() => setCarData([]));
+    }
+    if (viewMode === "bike") {
+      fetch("http://localhost:5000/bikes")
+        .then((res) => res.json())
+        .then((data) => setBikeData(data))
+        .catch(() => setBikeData([]));
+    }
+  }, [viewMode]);
 
-  const bikeData = [
-    {
-      name: "Kawasaki Ninja",
-      img: "bike2.jpg",
-      price: "$6,000",
-    },
-    {
-      name: "Yamaha R1",
-      img: "bike4.png",
-      price: "$18,000",
-    },
-    {
-      name: "Yamaha R1",
-      img: "bike4.png",
-      price: "$18,000",
-    },
-    {
-      name: "Yamaha R1",
-      img: "bike4.png",
-      price: "$18,000",
-    },
-  ];
-
-  // handle sending messages
-  const handleSendMessage = (e) => {
+  // Send message to Python backend
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const newMessage = { role: "user", content: input };
-    let botReply = "🤖 This is a demo reply.";
-
-    // greeting check (case-insensitive + partial match)
-    const lower = input.toLowerCase();
-    if (lower.includes("hi") || lower.includes("hello")) {
-      botReply = "👋 Welcome to Apni Gari 🚗! How can I help you?";
-    }
-
-    setMessages([...messages, newMessage, { role: "model", content: botReply }]);
+    const newMessage = { role: "user", type: "text", content: input };
+    setMessages((prev) => [...prev, newMessage]);
     setInput("");
+
+    try {
+      const res = await fetch("http://localhost:5000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input }),
+      });
+      const data = await res.json();
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "model", type: data.type, content: data.content },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "model", type: "text", content: "⚠ Error connecting to server." },
+      ]);
+    }
   };
 
   return (
@@ -86,15 +69,17 @@ const App = () => {
       {/* Chat Window */}
       {isOpen && (
         <div className="fixed inset-0 w-screen h-screen flex flex-col p-4 md:p-8 bg-gray-900 z-50">
-          {/* Header with buttons */}
+          {/* Header */}
           <header className="flex justify-between items-center mb-4">
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+            {/* ApniGari Bot Logo - Adjusted Size and Alignment */}
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
               ApniGari Bot
             </h1>
-            <div className="space-x-2">
+            {/* Buttons - Adjusted Spacing and Sizing */}
+            <div className="space-x-1 ml-auto">
               <button
                 onClick={() => setViewMode("chat")}
-                className={`px-3 py-1 rounded ${
+                className={`px-3 py-2 rounded text-base ${
                   viewMode === "chat" ? "bg-purple-600" : "bg-gray-700"
                 }`}
               >
@@ -102,7 +87,7 @@ const App = () => {
               </button>
               <button
                 onClick={() => setViewMode("car")}
-                className={`px-3 py-1 rounded ${
+                className={`px-3 py-2 rounded text-base ${
                   viewMode === "car" ? "bg-purple-600" : "bg-gray-700"
                 }`}
               >
@@ -110,7 +95,7 @@ const App = () => {
               </button>
               <button
                 onClick={() => setViewMode("bike")}
-                className={`px-3 py-1 rounded ${
+                className={`px-3 py-2 rounded text-base ${
                   viewMode === "bike" ? "bg-purple-600" : "bg-gray-700"
                 }`}
               >
@@ -118,7 +103,7 @@ const App = () => {
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="px-2 py-1 bg-red-500 rounded"
+                className="px-3 py-2 bg-red-500 rounded text-sm"
               >
                 Close
               </button>
@@ -134,13 +119,41 @@ const App = () => {
                   {messages.map((msg, i) => (
                     <div
                       key={i}
-                      className={`p-2 rounded-lg max-w-xs ${
+                      className={`p-2 rounded-lg ${
                         msg.role === "user"
-                          ? "bg-purple-600 ml-auto"
-                          : "bg-gray-600"
+                          ? "bg-purple-600 ml-auto max-w-xs"
+                          : "bg-gray-600 w-fit max-w-full"
                       }`}
                     >
-                      {msg.content}
+                      {msg.type === "text" ? (
+                        msg.content
+                      ) : (
+                        <div className="overflow-x-auto">
+                          {/* Table Styling Adjustments for more compactness */}
+                          <table className="w-full text-xs text-left text-white table-auto">
+                            <thead className="text-xs text-gray-200 uppercase bg-gray-700">
+                              <tr>
+                                {msg.content.length > 0 && Object.keys(msg.content[0]).map((key) => (
+                                  <th scope="col" key={key} className="px-2 py-1 font-bold whitespace-nowrap">
+                                    {key.replace('_', ' ')}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {msg.content.map((row, rowIndex) => (
+                                <tr key={rowIndex} className="bg-gray-800 border-b border-gray-700">
+                                  {Object.values(row).map((value, colIndex) => (
+                                    <td key={colIndex} className="px-2 py-1">
+                                      {value}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -164,40 +177,48 @@ const App = () => {
             {/* Car Mode */}
             {viewMode === "car" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {carData.map((car, i) => (
-                  <div
-                    key={i}
-                    className="bg-gray-700 p-4 rounded-xl shadow-lg text-center"
-                  >
-                    <img
-                      src={car.img}
-                      alt={car.name}
-                      className="w-full h-60 object-cover rounded-lg mb-2"
-                    />
-                    <h2 className="text-lg font-bold">{car.name}</h2>
-                    <p className="text-gray-300">{car.price}</p>
-                  </div>
-                ))}
+                {carData.length > 0 ? (
+                  carData.map((car, i) => (
+                    <div
+                      key={i}
+                      className="bg-gray-700 p-4 rounded-xl shadow-lg text-center"
+                    >
+                      <img
+                        src={car.img}
+                        alt={car.name}
+                        className="w-full h-60 object-cover rounded-lg mb-2"
+                      />
+                      <h2 className="text-lg font-bold">{car.name}</h2>
+                      <p className="text-gray-300">{car.price}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p>No car data available.</p>
+                )}
               </div>
             )}
 
             {/* Bike Mode */}
             {viewMode === "bike" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {bikeData.map((bike, i) => (
-                  <div
-                    key={i}
-                    className="bg-gray-700 p-4 rounded-xl shadow-lg text-center"
-                  >
-                    <img
-                      src={bike.img}
-                      alt={bike.name}
-                      className="w-full h-60 object-cover rounded-lg mb-2"
-                    />
-                    <h2 className="text-lg font-bold">{bike.name}</h2>
-                    <p className="text-gray-300">{bike.price}</p>
-                  </div>
-                ))}
+                {bikeData.length > 0 ? (
+                  bikeData.map((bike, i) => (
+                    <div
+                      key={i}
+                      className="bg-gray-700 p-4 rounded-xl shadow-lg text-center"
+                    >
+                      <img
+                        src={bike.img}
+                        alt={bike.name}
+                        className="w-full h-60 object-cover rounded-lg mb-2"
+                      />
+                      <h2 className="text-lg font-bold">{bike.name}</h2>
+                      <p className="text-gray-300">{bike.price}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p>No bike data available.</p>
+                )}
               </div>
             )}
           </div>
